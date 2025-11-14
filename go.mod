@@ -1,4 +1,4 @@
-module mdq
+module github.com/disser/mdq
 
 go 1.23
 
