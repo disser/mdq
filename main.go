@@ -22,18 +22,41 @@ func parseQueryStrings(queryStr string) []string {
 }
 
 func main() {
-	// Define command-line flags
-	headOnly := flag.Bool("h", false, "Return only the heading (the matching element)")
-	bodyOnly := flag.Bool("b", false, "Return only the body (content before next section)")
-	jsonOutput := flag.Bool("j", false, "Return results in JSON format")
-	noBlocks := flag.Bool("no-blocks", false, "Omit text blocks within triple backticks")
-	rawOutput := flag.Bool("r", false, "Raw output (only the found text, no filename or query)")
-	objectOutput := flag.Bool("o", false, "JSON object output for multiple queries (use with -j)")
-	csvOutput := flag.Bool("csv", false, "CSV output format")
-	markdownOutput := flag.Bool("m", false, "Markdown output (only the sections selected by the query)")
+	// Define command-line flags with both short and long options
+	var headOnly bool
+	flag.BoolVar(&headOnly, "h", false, "Return only the heading (the matching element)")
+	flag.BoolVar(&headOnly, "head", false, "Return only the heading (the matching element)")
+
+	var bodyOnly bool
+	flag.BoolVar(&bodyOnly, "b", false, "Return only the body (content before next section)")
+	flag.BoolVar(&bodyOnly, "body", false, "Return only the body (content before next section)")
+
+	var jsonOutput bool
+	flag.BoolVar(&jsonOutput, "j", false, "Return results in JSON format")
+	flag.BoolVar(&jsonOutput, "json", false, "Return results in JSON format")
+
+	var noBlocks bool
+	flag.BoolVar(&noBlocks, "n", false, "Omit text blocks within triple backticks")
+	flag.BoolVar(&noBlocks, "no-blocks", false, "Omit text blocks within triple backticks")
+
+	var rawOutput bool
+	flag.BoolVar(&rawOutput, "r", false, "Raw output (only the found text, no filename or query)")
+	flag.BoolVar(&rawOutput, "raw", false, "Raw output (only the found text, no filename or query)")
+
+	var objectOutput bool
+	flag.BoolVar(&objectOutput, "o", false, "JSON object output for multiple queries (use with -j)")
+	flag.BoolVar(&objectOutput, "object", false, "JSON object output for multiple queries (use with --json)")
+
+	var csvOutput bool
+	flag.BoolVar(&csvOutput, "c", false, "CSV output format")
+	flag.BoolVar(&csvOutput, "csv", false, "CSV output format")
+
+	var markdownOutput bool
+	flag.BoolVar(&markdownOutput, "m", false, "Markdown output (only the sections selected by the query)")
+	flag.BoolVar(&markdownOutput, "markdown", false, "Markdown output (only the sections selected by the query)")
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage: mdq [-h|-b] [-j] [--no-blocks] QUERY [FILES...]\n\n")
+		fmt.Fprintf(os.Stderr, "Usage: mdq [-h|--head|-b|--body] [-j|--json] [-n|--no-blocks] QUERY [FILES...]\n\n")
 		fmt.Fprintf(os.Stderr, "Query markdown files and extract information like 'jq' does for JSON.\n\n")
 		fmt.Fprintf(os.Stderr, "Query syntax:\n")
 		fmt.Fprintf(os.Stderr, "  #           First h1 block\n")
@@ -49,24 +72,24 @@ func main() {
 	flag.Parse()
 
 	// Check for conflicting flags
-	if *headOnly && *bodyOnly {
-		fmt.Fprintln(os.Stderr, "Error: -h and -b flags are mutually exclusive")
+	if headOnly && bodyOnly {
+		fmt.Fprintln(os.Stderr, "Error: -h/--head and -b/--body flags are mutually exclusive")
 		os.Exit(1)
 	}
 
 	// Check for conflicting output formats
 	outputFlags := 0
-	if *jsonOutput {
+	if jsonOutput {
 		outputFlags++
 	}
-	if *csvOutput {
+	if csvOutput {
 		outputFlags++
 	}
-	if *markdownOutput {
+	if markdownOutput {
 		outputFlags++
 	}
 	if outputFlags > 1 {
-		fmt.Fprintln(os.Stderr, "Error: -j, -csv, and -m flags are mutually exclusive")
+		fmt.Fprintln(os.Stderr, "Error: -j/--json, -c/--csv, and -m/--markdown flags are mutually exclusive")
 		os.Exit(1)
 	}
 
@@ -94,14 +117,14 @@ func main() {
 
 	// Set up options
 	opts := Options{
-		HeadOnly:       *headOnly,
-		BodyOnly:       *bodyOnly,
-		JSONOutput:     *jsonOutput,
-		NoBlocks:       *noBlocks,
-		RawOutput:      *rawOutput,
-		ObjectOutput:   *objectOutput,
-		CSVOutput:      *csvOutput,
-		MarkdownOutput: *markdownOutput,
+		HeadOnly:       headOnly,
+		BodyOnly:       bodyOnly,
+		JSONOutput:     jsonOutput,
+		NoBlocks:       noBlocks,
+		RawOutput:      rawOutput,
+		ObjectOutput:   objectOutput,
+		CSVOutput:      csvOutput,
+		MarkdownOutput: markdownOutput,
 	}
 
 	var results []*QueryResult
@@ -115,7 +138,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		doc, err := ParseDocument(string(content), "stdin", *noBlocks)
+		doc, err := ParseDocument(string(content), "stdin", noBlocks)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error parsing stdin: %v\n", err)
 			os.Exit(1)
@@ -135,7 +158,7 @@ func main() {
 				continue
 			}
 
-			doc, err := ParseDocument(string(content), filePath, *noBlocks)
+			doc, err := ParseDocument(string(content), filePath, noBlocks)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error parsing %s: %v\n", filePath, err)
 				continue

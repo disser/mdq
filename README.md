@@ -13,7 +13,7 @@ The binary will be installed to `$GOPATH/bin/mdq` (typically `~/go/bin/mdq`).
 ## Usage
 
 ```bash
-mdq [-h|-b] [-j] [--no-blocks] QUERY [FILES...]
+mdq [-h|--head|-b|--body] [-j|--json] [-n|--no-blocks] [-r|--raw] [-o|--object] [-c|--csv] [-m|--markdown] QUERY [FILES...]
 ```
 
 If no FILES are provided, mdq reads from stdin.
@@ -46,15 +46,16 @@ Query multiple fields at once using comma-separated queries:
 
 ## Options
 
-- `-h` - Return only the heading (the matching element itself)
-- `-b` - Return only the body (content before the next section)
-- `-j` - Return results in JSON format
-- `-r` - Raw output (only the found text, no filename or field label)
-- `-o` - JSON object output for multiple queries (use with `-j`)
-- `--csv` - CSV output format
-- `--no-blocks` - Omit text blocks within triple backticks
+- `-h, --head` - Return only the heading (the matching element itself)
+- `-b, --body` - Return only the body (content before the next section)
+- `-j, --json` - Return results in JSON format
+- `-r, --raw` - Raw output (only the found text, no filename or field label)
+- `-o, --object` - JSON object output for multiple queries (use with `-j` or `--json`)
+- `-c, --csv` - CSV output format
+- `-m, --markdown` - Markdown output (only the sections selected by the query)
+- `-n, --no-blocks` - Omit text blocks within triple backticks
 
-**Note:** `-h` and `-b` are mutually exclusive. If neither is specified, both heading and body are returned.
+**Note:** `-h/--head` and `-b/--body` are mutually exclusive. If neither is specified, both heading and body are returned.
 
 ## Examples
 
@@ -100,8 +101,10 @@ mdq -j "date, title" notes.md
 #   {"file": "notes.md", "heading": "title", "body": "My Document"}
 # ]
 
-# Get multiple fields as JSON object (with -o flag)
+# Get multiple fields as JSON object (with -o/--object flag)
 mdq -j -o "date, title" notes.md
+# or using long options
+mdq --json --object "date, title" notes.md
 # Output:
 # {
 #   "file": "notes.md",
@@ -137,6 +140,8 @@ mdq "##Notes[1]" notes.md
 ```bash
 # Get Notes section without code blocks
 mdq --no-blocks "##Notes" notes.md
+# or using the short option
+mdq -n "##Notes" notes.md
 ```
 
 ### CSV output
@@ -144,6 +149,8 @@ mdq --no-blocks "##Notes" notes.md
 ```bash
 # Get multiple fields as CSV
 mdq --csv "date, title, author" *.md
+# or using the short option
+mdq -c "date, title, author" *.md
 # Output:
 # file,date,title,author
 # file1.md,2025-11-13,My Document,John Doe
@@ -161,6 +168,8 @@ mdq --csv "date, title" *.md | tail -n +2 | sort -t, -k2
 ```bash
 # Get results in JSON format
 mdq -j "##Summary" notes.md
+# or using long options
+mdq --json "##Summary" notes.md
 
 # Output (single file):
 {
@@ -264,6 +273,8 @@ mdq --no-blocks "##Notes" example.md
 
 # Get only Notes heading
 mdq -h "##Notes" example.md
+# or using long option
+mdq --head "##Notes" example.md
 # Output:
 # ## Notes
 ```
