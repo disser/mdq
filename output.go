@@ -94,7 +94,130 @@ func FormatOutput(results []*QueryResult, opts Options) string {
 	if opts.JSONOutput {
 		return formatJSON(results, opts)
 	}
+	if opts.MarkdownOutput {
+		return formatMarkdown(results, opts)
+	}
 	return formatText(results, opts)
+}
+
+// formatMarkdown formats results as markdown, including only the sections selected by the query
+func formatMarkdown(results []*QueryResult, opts Options) string {
+	var output strings.Builder
+
+	// Group results by file for better formatting
+	type fileGroup struct {
+		file    string
+		results []*QueryResult
+	}
+
+	var groups []fileGroup
+	currentFile := ""
+	var currentResults []*QueryResult
+
+	for _, result := range results {
+		if result.File != currentFile {
+			if currentFile != "" {
+				groups = append(groups, fileGroup{currentFile, currentResults})
+			}
+			currentFile = result.File
+			currentResults = []*QueryResult{result}
+		} else {
+			currentResults = append(currentResults, result)
+		}
+	}
+
+	if currentFile != "" {
+		groups = append(groups, fileGroup{currentFile, currentResults})
+	}
+
+	// Track if frontmatter has been added for each file
+	frontmatterAdded := make(map[string]bool)
+
+	// Format output
+	for gi, group := range groups {
+		hasFrontmatter := false
+
+		// Add file comment if multiple files
+		if len(groups) > 1 {
+			if gi > 0 {
+				output.WriteString("\n")
+			}
+			output.WriteString(fmt.Sprintf("<!-- File: %s -->\n\n", group.file))
+		}
+
+		// First pass: identify if there are frontmatter queries with non-empty values
+		for _, result := range group.results {
+			// A frontmatter query will have result.Query that doesn't start with #
+			if !strings.HasPrefix(result.Query, "#") {
+				// Only mark as having frontmatter if there's actual content
+				if result.Body != "" {
+					hasFrontmatter = true
+					break
+				}
+			}
+		}
+
+		// Output frontmatter if present
+		if hasFrontmatter && !frontmatterAdded[group.file] {
+			output.WriteString("---\n")
+			for _, result := range group.results {
+				// Only include frontmatter fields that were queried
+				if !strings.HasPrefix(result.Query, "#") {
+					// Get the field name - use result.Heading if available, otherwise use result.Query
+					// (when -b flag is used, result.Heading will be empty)
+					fieldName := result.Heading
+					if fieldName == "" {
+						fieldName = result.Query
+					}
+
+					if result.Body != "" {
+						// Format the value
+						output.WriteString(fmt.Sprintf("%s: %s\n", fieldName, result.Body))
+					} else {
+						// Empty value
+						output.WriteString(fmt.Sprintf("%s: \"\"\n", fieldName))
+					}
+				}
+			}
+			output.WriteString("---\n\n")
+			frontmatterAdded[group.file] = true
+		}
+
+		// Output each section result
+		for ri, result := range group.results {
+			// Skip frontmatter fields (already handled above)
+			if !strings.HasPrefix(result.Query, "#") {
+				continue
+			}
+
+			// Skip empty results
+			if result.Heading == "" && result.Body == "" {
+				continue
+			}
+
+			// Add blank line between multiple section results
+			if ri > 0 {
+				output.WriteString("\n")
+			}
+
+			// Output heading if present
+			if result.Heading != "" && !opts.BodyOnly {
+				output.WriteString(result.Heading)
+				if result.Body != "" && !opts.HeadOnly {
+					output.WriteString("\n\n")
+				}
+			}
+
+			// Output body if present
+			if result.Body != "" && !opts.HeadOnly {
+				output.WriteString(result.Body)
+			}
+
+			output.WriteString("\n")
+		}
+	}
+
+	return strings.TrimRight(output.String(), "\n")
 }
 
 // formatJSON formats results as JSON

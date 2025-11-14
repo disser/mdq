@@ -30,6 +30,7 @@ func main() {
 	rawOutput := flag.Bool("r", false, "Raw output (only the found text, no filename or query)")
 	objectOutput := flag.Bool("o", false, "JSON object output for multiple queries (use with -j)")
 	csvOutput := flag.Bool("csv", false, "CSV output format")
+	markdownOutput := flag.Bool("m", false, "Markdown output (only the sections selected by the query)")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "Usage: mdq [-h|-b] [-j] [--no-blocks] QUERY [FILES...]\n\n")
@@ -50,6 +51,22 @@ func main() {
 	// Check for conflicting flags
 	if *headOnly && *bodyOnly {
 		fmt.Fprintln(os.Stderr, "Error: -h and -b flags are mutually exclusive")
+		os.Exit(1)
+	}
+
+	// Check for conflicting output formats
+	outputFlags := 0
+	if *jsonOutput {
+		outputFlags++
+	}
+	if *csvOutput {
+		outputFlags++
+	}
+	if *markdownOutput {
+		outputFlags++
+	}
+	if outputFlags > 1 {
+		fmt.Fprintln(os.Stderr, "Error: -j, -csv, and -m flags are mutually exclusive")
 		os.Exit(1)
 	}
 
@@ -77,13 +94,14 @@ func main() {
 
 	// Set up options
 	opts := Options{
-		HeadOnly:     *headOnly,
-		BodyOnly:     *bodyOnly,
-		JSONOutput:   *jsonOutput,
-		NoBlocks:     *noBlocks,
-		RawOutput:    *rawOutput,
-		ObjectOutput: *objectOutput,
-		CSVOutput:    *csvOutput,
+		HeadOnly:       *headOnly,
+		BodyOnly:       *bodyOnly,
+		JSONOutput:     *jsonOutput,
+		NoBlocks:       *noBlocks,
+		RawOutput:      *rawOutput,
+		ObjectOutput:   *objectOutput,
+		CSVOutput:      *csvOutput,
+		MarkdownOutput: *markdownOutput,
 	}
 
 	var results []*QueryResult

@@ -35,11 +35,12 @@ type Query struct {
 
 // Options represents command-line options
 type Options struct {
-	HeadOnly     bool
-	BodyOnly     bool
-	JSONOutput   bool
-	NoBlocks     bool
-	RawOutput    bool
-	ObjectOutput bool
-	CSVOutput    bool
+	HeadOnly       bool
+	BodyOnly       bool
+	JSONOutput     bool
+	NoBlocks       bool
+	RawOutput      bool
+	ObjectOutput   bool
+	CSVOutput      bool
+	MarkdownOutput bool
 }
