@@ -10,7 +10,8 @@ import (
 // ParseQuery parses a query string into a Query object
 func ParseQuery(queryStr string) (*Query, error) {
 	query := &Query{
-		Index: 0, // Default to first match
+		Index:         0,     // Default to first match
+		ExplicitIndex: false, // Default to not explicitly specified
 	}
 
 	// Check if it's a section query (starts with #)
@@ -34,9 +35,11 @@ func ParseQuery(queryStr string) (*Query, error) {
 			index, _ := strconv.Atoi(matches[2])
 			query.Title = title
 			query.Index = index
+			query.ExplicitIndex = true // Index was explicitly specified
 		} else {
 			query.Title = strings.TrimSpace(rest)
 			query.Index = 0
+			query.ExplicitIndex = false // No explicit index
 		}
 
 		return query, nil
@@ -50,14 +53,17 @@ func ParseQuery(queryStr string) (*Query, error) {
 }
 
 // ExecuteQuery executes a query against a document
-func ExecuteQuery(doc *Document, query *Query, opts Options) *QueryResult {
-	result := &QueryResult{
-		File:  doc.FilePath,
-		Query: formatQuery(query),
-	}
+func ExecuteQuery(doc *Document, query *Query, opts Options) []*QueryResult {
+	// Create a slice to hold the results
+	var results []*QueryResult
 
 	if query.Type == "frontmatter" {
-		// Query frontmatter
+		// Frontmatter queries always return a single result
+		result := &QueryResult{
+			File:  doc.FilePath,
+			Query: formatQuery(query),
+		}
+
 		if value, ok := doc.Frontmatter[query.Field]; ok {
 			// Handle nil values (empty YAML fields) as empty strings
 			var bodyStr string
@@ -73,7 +79,7 @@ func ExecuteQuery(doc *Document, query *Query, opts Options) *QueryResult {
 				result.Heading = query.Field
 			}
 		}
-		return result
+		return []*QueryResult{result}
 	}
 
 	// Query sections
@@ -89,21 +95,49 @@ func ExecuteQuery(doc *Document, query *Query, opts Options) *QueryResult {
 			continue
 		}
 
-		// Check if this is the right index
-		if matchIndex == query.Index {
+		// For explicit index, only return the match at the specified index
+		if query.ExplicitIndex {
+			if matchIndex == query.Index {
+				result := &QueryResult{
+					File:  doc.FilePath,
+					Query: formatQuery(query),
+				}
+				if !opts.HeadOnly {
+					result.Body = section.Body
+				}
+				if !opts.BodyOnly {
+					result.Heading = section.Heading
+				}
+				return []*QueryResult{result}
+			}
+		} else {
+			// For non-explicit index, collect all matches
+			result := &QueryResult{
+				File:  doc.FilePath,
+				Query: formatQuery(query),
+			}
 			if !opts.HeadOnly {
 				result.Body = section.Body
 			}
 			if !opts.BodyOnly {
 				result.Heading = section.Heading
 			}
-			return result
+			results = append(results, result)
 		}
 
 		matchIndex++
 	}
 
-	return result
+	// For an explicit index that wasn't found, return an empty result
+	if query.ExplicitIndex && len(results) == 0 {
+		result := &QueryResult{
+			File:  doc.FilePath,
+			Query: formatQuery(query),
+		}
+		return []*QueryResult{result}
+	}
+
+	return results
 }
 
 // formatQuery converts a Query back to a string representation
@@ -118,7 +152,7 @@ func formatQuery(q *Query) string {
 		sb.WriteString("#")
 	}
 	sb.WriteString(q.Title)
-	if q.Index > 0 {
+	if q.ExplicitIndex {
 		sb.WriteString(fmt.Sprintf("[%d]", q.Index))
 	}
 	return sb.String()

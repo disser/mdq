@@ -26,11 +26,12 @@ type QueryResult struct {
 
 // Query represents a parsed query
 type Query struct {
-	Type  string // "frontmatter" or "section"
-	Level int    // For section queries: heading level (1, 2, 3, etc.)
-	Title string // For section queries: title to match (empty for any)
-	Index int    // Index to match (-1 for first/default)
-	Field string // For frontmatter queries: field name
+	Type          string // "frontmatter" or "section"
+	Level         int    // For section queries: heading level (1, 2, 3, etc.)
+	Title         string // For section queries: title to match (empty for any)
+	Index         int    // Index to match (0 for first/default)
+	ExplicitIndex bool   // Whether an index was explicitly specified using [N] syntax
+	Field         string // For frontmatter queries: field name
 }
 
 // Options represents command-line options

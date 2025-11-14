@@ -59,9 +59,10 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Usage: mdq [-h|--head|-b|--body] [-j|--json] [-n|--no-blocks] QUERY [FILES...]\n\n")
 		fmt.Fprintf(os.Stderr, "Query markdown files and extract information like 'jq' does for JSON.\n\n")
 		fmt.Fprintf(os.Stderr, "Query syntax:\n")
-		fmt.Fprintf(os.Stderr, "  #           First h1 block\n")
+		fmt.Fprintf(os.Stderr, "  #           All h1 blocks\n")
 		fmt.Fprintf(os.Stderr, "  #[0]        First h1 block (explicit index)\n")
-		fmt.Fprintf(os.Stderr, "  ##Notes     First h2 block titled \"Notes\"\n")
+		fmt.Fprintf(os.Stderr, "  ##Notes     All h2 blocks titled \"Notes\"\n")
+		fmt.Fprintf(os.Stderr, "  ##Notes[1]  Second h2 block titled \"Notes\"\n")
 		fmt.Fprintf(os.Stderr, "  ##[3]       Fourth h2 in the document (0-indexed)\n")
 		fmt.Fprintf(os.Stderr, "  date        \"date\" field from YAML frontmatter\n\n")
 		fmt.Fprintf(os.Stderr, "Options:\n")
@@ -146,8 +147,8 @@ func main() {
 
 		// Execute all queries against the document
 		for _, query := range queries {
-			result := ExecuteQuery(doc, query, opts)
-			results = append(results, result)
+			queryResults := ExecuteQuery(doc, query, opts)
+			results = append(results, queryResults...)
 		}
 	} else {
 		// Process each file
@@ -166,8 +167,8 @@ func main() {
 
 			// Execute all queries against the document
 			for _, query := range queries {
-				result := ExecuteQuery(doc, query, opts)
-				results = append(results, result)
+				queryResults := ExecuteQuery(doc, query, opts)
+				results = append(results, queryResults...)
 			}
 		}
 	}
