@@ -32,6 +32,7 @@ type Query struct {
 	Index         int    // Index to match (0 for first/default)
 	ExplicitIndex bool   // Whether an index was explicitly specified using [N] syntax
 	Field         string // For frontmatter queries: field name
+	AllFields     bool   // For frontmatter queries: whether to return all fields
 }
 
 // Options represents command-line options

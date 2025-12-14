@@ -45,7 +45,15 @@ func ParseQuery(queryStr string) (*Query, error) {
 		return query, nil
 	}
 
-	// Otherwise, it's a frontmatter field query
+	// Check for the special "*" query that means "all frontmatter fields"
+	if queryStr == "*" {
+		query.Type = "frontmatter"
+		query.Field = queryStr
+		query.AllFields = true
+		return query, nil
+	}
+
+	// Otherwise, it's a regular frontmatter field query
 	query.Type = "frontmatter"
 	query.Field = queryStr
 
@@ -58,7 +66,34 @@ func ExecuteQuery(doc *Document, query *Query, opts Options) []*QueryResult {
 	var results []*QueryResult
 
 	if query.Type == "frontmatter" {
-		// Frontmatter queries always return a single result
+		// Check if this is the special "all fields" query
+		if query.AllFields {
+			// For the "*" query, create a result for each frontmatter field
+			for field, value := range doc.Frontmatter {
+				result := &QueryResult{
+					File:  doc.FilePath,
+					Query: field, // Use the actual field name as the query
+				}
+
+				// Handle nil values (empty YAML fields) as empty strings
+				var bodyStr string
+				if value != nil {
+					bodyStr = fmt.Sprintf("%v", value)
+				}
+
+				if !opts.HeadOnly {
+					result.Body = bodyStr
+				}
+				// In raw mode, don't set heading for frontmatter
+				if !opts.BodyOnly && !opts.RawOutput {
+					result.Heading = field
+				}
+				results = append(results, result)
+			}
+			return results
+		}
+
+		// Regular frontmatter query for a specific field
 		result := &QueryResult{
 			File:  doc.FilePath,
 			Query: formatQuery(query),

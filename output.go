@@ -88,6 +88,33 @@ func formatCSV(results []*QueryResult) string {
 
 // FormatOutput formats query results for display
 func FormatOutput(results []*QueryResult, opts Options) string {
+	// Check for the special case of "*" query with CSV output
+	if opts.CSVOutput && len(results) > 0 {
+		// Look for evidence that this was a "*" query (multiple frontmatter fields from the same file)
+		isAllFieldsQuery := false
+		frontmatterFields := make(map[string]bool)
+
+		// Count frontmatter fields per file
+		fileFieldCount := make(map[string]int)
+
+		for _, result := range results {
+			if !strings.HasPrefix(result.Query, "#") { // It's a frontmatter field
+				frontmatterFields[result.Query] = true
+				fileFieldCount[result.File]++
+
+				// If we have multiple frontmatter fields for a file, it's likely the "*" query
+				if fileFieldCount[result.File] > 1 {
+					isAllFieldsQuery = true
+				}
+			}
+		}
+
+		// If it seems like the "*" query and we have multiple fields, return an error
+		if isAllFieldsQuery && len(frontmatterFields) > 1 {
+			return "Error: CSV output is not supported with the '*' query.\nUse --json format instead for all frontmatter fields."
+		}
+	}
+
 	if opts.CSVOutput {
 		return formatCSV(results)
 	}
@@ -227,6 +254,31 @@ func formatJSON(results []*QueryResult, opts Options) string {
 		return formatJSONObject(results)
 	}
 
+	// Check if this is the "*" query for all frontmatter fields
+	// (This is the case when we have multiple frontmatter fields per file)
+	isAllFieldsQuery := false
+	if len(results) > 0 {
+		// Count frontmatter fields per file
+		fileFieldCount := make(map[string]int)
+
+		for _, result := range results {
+			if !strings.HasPrefix(result.Query, "#") { // It's a frontmatter field
+				fileFieldCount[result.File]++
+
+				// If we have multiple frontmatter fields for a file, it's likely the "*" query
+				if fileFieldCount[result.File] > 1 {
+					isAllFieldsQuery = true
+					break
+				}
+			}
+		}
+
+		// For the "*" query, output a more direct format with frontmatter field names as keys
+		if isAllFieldsQuery {
+			return formatJSONFrontmatter(results)
+		}
+	}
+
 	// If only one result, output as single object
 	if len(results) == 1 {
 		data, err := json.MarshalIndent(results[0], "", "  ")
@@ -238,6 +290,51 @@ func formatJSON(results []*QueryResult, opts Options) string {
 
 	// Multiple results, output as array
 	data, err := json.MarshalIndent(results, "", "  ")
+	if err != nil {
+		return ""
+	}
+	return string(data)
+}
+
+// formatJSONFrontmatter formats all frontmatter fields in a more direct way
+func formatJSONFrontmatter(results []*QueryResult) string {
+	// Group by file
+	fileData := make(map[string]map[string]interface{})
+	var fileOrder []string
+
+	for _, result := range results {
+		// Initialize entry for this file if not exists
+		if _, ok := fileData[result.File]; !ok {
+			fileData[result.File] = make(map[string]interface{})
+			fileData[result.File]["file"] = result.File
+			fileOrder = append(fileOrder, result.File)
+		}
+
+		// Get the frontmatter field name
+		fieldName := result.Query
+		if fieldName != "" {
+			// Add the value directly with the frontmatter field name as the key
+			fileData[result.File][fieldName] = result.Body
+		}
+	}
+
+	// Create output array
+	output := make([]map[string]interface{}, 0, len(fileData))
+	for _, file := range fileOrder {
+		output = append(output, fileData[file])
+	}
+
+	// If only one file, return as a single object
+	if len(output) == 1 {
+		data, err := json.MarshalIndent(output[0], "", "  ")
+		if err != nil {
+			return ""
+		}
+		return string(data)
+	}
+
+	// Otherwise, return as array of objects
+	data, err := json.MarshalIndent(output, "", "  ")
 	if err != nil {
 		return ""
 	}

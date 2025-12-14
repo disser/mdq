@@ -34,6 +34,7 @@ Query YAML frontmatter fields by name:
 
 - `date` - Returns the "date" field from frontmatter
 - `title` - Returns the "title" field from frontmatter
+- `*` - Returns all frontmatter fields at once (not available with CSV output)
 - Any other frontmatter field name
 
 ### Multiple Queries
@@ -73,6 +74,36 @@ mdq -j title file1.md file2.md
 
 # Get raw values from multiple files (one per line)
 mdq -r date file1.md file2.md
+
+# Get all frontmatter fields at once
+mdq "*" notes.md
+
+# Get all frontmatter fields in JSON format
+mdq -j "*" notes.md
+# Output:
+# {
+#   "author": "John Doe",
+#   "date": "2025-11-13",
+#   "file": "notes.md",
+#   "title": "My Document"
+# }
+
+# Get all frontmatter fields from multiple files
+mdq -j "*" file1.md file2.md
+# Output (array of objects):
+# [
+#   {
+#     "author": "John Doe",
+#     "date": "2025-11-13",
+#     "file": "file1.md",
+#     "title": "My Document"
+#   },
+#   {
+#     "date": "2025-11-14",
+#     "file": "file2.md",
+#     "title": "Another Doc"
+#   }
+# ]
 ```
 
 ### Multiple queries
